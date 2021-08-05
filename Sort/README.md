@@ -12,7 +12,9 @@ FSM must never uses mathematical or equality operators.
 Only digital design foundation modules are used in the design
 
 Black Box Design Diagram:
+
 ![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sort/Bubble_Sort_Black_Box_Diagram.jpg?raw=true)
 
-FSM State Diagram
+FSM State Diagram:
+
 ![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sort/Bubble_Sort_FSM_State_Diagram_.jpg?raw=true)
