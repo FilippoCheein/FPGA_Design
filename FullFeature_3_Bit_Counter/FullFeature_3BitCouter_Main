@@ -1,0 +1,305 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 11/09/2018 12:23:52 PM
+// Design Name: 
+// Module Name: 3_Bit_Counter
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+module clk_divder_nbit(clockin, clockout); 
+    input clockin; 
+    output wire clockout; 
+
+    parameter n = 13; 
+    reg [n:0] count; 
+
+    always@(posedge clockin) 
+    begin 
+        count <= count + 1; 
+    end 
+
+    assign clockout = count[n]; 
+endmodule 
+
+
+module Three_Bit_Counter(sseg, display, reset_n, Even, Odd, Hold, UP, clk);
+ input  reset_n, 
+        Even,
+        Odd, 
+        Hold, 
+        UP, 
+        clk; 
+        
+   wire slowclock;
+        
+   reg [2:0] moore;
+   
+   output [7:0] sseg;
+   output [3:0] display;
+    
+   //- next state & present state variables
+   reg [2:0] NS, PS; 
+   //- bit-level state representations
+   parameter [2:0] st_A = 3'b000,   // 0
+                   st_B = 3'b001,   // 1
+                   st_C = 3'b010,   // 2
+                   st_D = 3'b011,   // 3
+                   st_E = 3'b100,   // 4
+                   st_F = 3'b101,   // 5
+                   st_G = 3'b110,   // 6
+                   st_H=3'b111;   // 7
+   
+   clk_divder_nbit #(.n(25)) MY_DIV (
+              .clockin (clk), 
+              .clockout (slowclock) 
+             );  
+
+   //- model the state registers
+   always @ (negedge reset_n, posedge slowclock)
+      if (reset_n == 1) 
+         PS <= st_A; 
+      else
+         PS <= NS; 
+   
+
+   //- model the next-state and output decoders
+   always @ (Even, Odd, Hold, UP, PS)
+   begin
+       moore = 0; // assign all outputs
+      case(PS)
+      
+      st_A:
+            begin
+              moore = 3'b000; 
+          if (Hold == 1)
+              NS = st_A;
+          else if ( UP == 1 )
+              begin       
+                if (Even == 1)
+                  NS = st_C; 
+                else if (Odd == 1)
+                  NS = st_B; 
+                else 
+                NS = st_B;
+               end
+            else
+              begin  
+                 if (Even == 1)
+                   NS = st_G;  
+                 else if (Odd == 1)
+                   NS = st_H; 
+                 else
+                 NS = st_H;
+              end
+          end
+          
+          
+         st_B:
+              begin
+                moore = 3'b001;
+              if (Hold == 1)
+                NS = st_B; 
+              else if ( UP == 1 )
+                 begin       
+                  if (Even == 1)
+                    NS = st_C; 
+                  else if (Odd == 1)
+                    NS = st_D;
+                  else
+                    NS = st_C;
+                 end 
+               else
+                 begin  
+                   if (Even == 1)
+                    NS = st_A;  
+                   else if (Odd == 1)
+                     NS = st_H; 
+                   else
+                   NS = st_A;
+                 end
+            end
+         
+         st_C:
+            begin
+                  moore = 3'b010; //2
+               if (Hold == 1)
+                  NS = st_C; 
+                else if ( UP == 1 )
+                  begin       
+                    if (Even == 1)
+                          NS = st_E; 
+                    else if (Odd == 1)
+                          NS = st_D; 
+                    else
+                    NS = st_D;
+                   end
+               else
+                  begin  
+                     if (Even == 1)
+                          NS = st_A;  
+                     else if (Odd == 1)
+                          NS = st_B; 
+                     else
+                         NS = st_B; 
+                  end
+           end
+           
+           st_D:
+               begin
+                   moore = 3'b011; // 3
+                   if ( Hold == 1)
+                     NS = st_D;
+                    else if ( UP == 1 )
+                        begin       
+                          if (Even == 1)
+                            NS = st_E; 
+                          else if (Odd == 1)
+                            NS = st_F; 
+                          else 
+                            NS = st_E;
+                        end
+                    else
+                       begin  
+                          if (Even == 1)
+                            NS = st_C;  
+                          else if (Odd == 1)
+                            NS = st_B; 
+                          else 
+                            NS = st_C;
+                      end
+                end
+           
+           st_E:
+                begin
+                  moore = 3'b100; //4
+                 if ( Hold == 1 )
+                     NS = st_E;
+                 else if ( UP == 1 )
+                       begin       
+                         if (Even == 1)
+                              NS = st_G; 
+                         else if (Odd == 1)
+                              NS = st_F; 
+                         else
+                            NS = st_F;
+                       end
+                   else
+                       begin  
+                         if (Even == 1)
+                             NS = st_C;  
+                         else if (Odd == 1)
+                             NS = st_D; 
+                         else
+                            NS = st_D;
+                       end
+                 end
+           
+           st_F:
+                   begin
+                       moore = 3'b101; //5
+                       if (Hold == 1)
+                        NS = st_F;
+                       else if ( UP == 1 )
+                           begin       
+                              if (Even == 1)
+                                 NS = st_G; 
+                              else if (Odd == 1)
+                                 NS = st_H; 
+                               else
+                                 NS = st_G;
+                            end
+                         else
+                            begin  
+                               if (Even == 1)
+                                   NS = st_E;  
+                               else if (Odd == 1)
+                                   NS = st_D; 
+                                else
+                                   NS = st_E;        
+                            end
+                     end
+           st_G:
+                  begin
+                        moore = 3'b110; // 6
+                    if ( Hold == 1)
+                     NS = st_G;
+                    else if ( UP == 1 )
+                         begin       
+                          if (Even == 1)
+                             NS = st_A; 
+                          else if (Odd == 1)
+                             NS = st_H; 
+                          else
+                             NS = st_H;
+                         end
+                    else
+                        begin  
+                           if (Even == 1)
+                              NS = st_E;  
+                           else if (Odd == 1)
+                              NS = st_F; 
+                            else
+                            NS = st_F;
+                        end
+                   end
+              
+             st_H:
+                    begin
+                       moore = 3'b111; // 7
+                       if (Hold == 1)
+                          NS = st_H;
+                       else if ( UP == 1 )
+                           begin       
+                             if (Even == 1)
+                               NS = st_A; 
+                             else if (Odd == 1)
+                               NS = st_B; 
+                             else
+                               NS = st_A;
+                           end
+                       else
+                           begin  
+                             if (Even == 1)
+                               NS = st_G;  
+                             else if (Odd == 1)
+                               NS = st_F;
+                             else
+                               NS = st_G; 
+                           end
+                     end
+           
+         default: NS = st_A; 
+           
+         endcase
+     end              
+
+
+univ_sseg my_univ_sseg (
+      .cnt1 ({11'b00000000000,moore}), 
+      .cnt2 (0), 
+      .valid (1), 
+      .dp_en (0), 
+      .dp_sel (0), 
+      .mod_sel (0), 
+      .sign (0), 
+      .clk (clk), 
+      .ssegs (sseg), 
+      .disp_en (display) 
+      ); 
+
+
+
+endmodule
