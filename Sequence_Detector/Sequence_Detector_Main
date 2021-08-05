@@ -1,0 +1,400 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////
+// Company: Cal Poly
+// Engineer: Filippo Cheein, Jose Gomez
+// 
+// Create Date: 11/19/2018 06:06:27 PM
+// Design Name: Sequence Detector
+// Project Name: Sequence Detector FSMs
+//  
+// Description: circuit uses first 8 switches to input random 1’s and 
+//              0’s to a string of numbers. This string is fed into a 
+//              sequence detector and analyzed to check if one of two 
+//              pre-set sequences can be found in the string. “Cool” 
+//              message is shown if sequence is found, and “Crud” if 
+//              one isn’t found.
+//
+//////////////////////////////////////////////////////////////////////
+
+
+module clk_divder_nbit(clockin, clockout); 
+    input clockin; 
+    output wire clockout; 
+
+    parameter n = 13; 
+    reg [n:0] count; 
+
+    always@(posedge clockin) 
+    begin 
+        count <= count + 1; 
+    end 
+
+    assign clockout = count[n]; 
+endmodule 
+
+ module mux_8t1_nb(SEL, D0, D1, D2, D3, D4, D5, D6, D7, D_OUT); 
+       input  [2:0] SEL; 
+       input  [n-1:0] D0, D1, D2, D3, D4, D5, D6, D7; 
+       output reg [n-1:0] D_OUT;  
+       
+       parameter n = 8; 
+        
+       always @(SEL, D0, D1, D2, D3, D4, D5, D6, D7)
+       begin 
+          case (SEL)
+		     0:  D_OUT = D0;
+		     1:  D_OUT = D1;
+		     2:  D_OUT = D2;
+		     3:  D_OUT = D3;
+		     4:  D_OUT = D4;
+		     5:  D_OUT = D5;
+		     6:  D_OUT = D6;
+		     7:  D_OUT = D7;
+			 default: D_OUT = 0; 
+		  endcase 
+       end
+endmodule
+
+module cntr_udclr_nb(clk, clr, up, ld, D, count, rco); 
+    input  clk, clr, up, ld; 
+    input  [n-1:0] D; 
+    output   reg [n-1:0] count; 
+    output   reg rco; 
+
+    //- default data-width 
+    parameter n = 8; 
+    
+    always @(posedge clr, posedge clk)
+    begin 
+        if (clr == 1)       // asynch reset
+           count <= 0;
+        else if (ld == 1)   // load new value
+           count <= D; 
+        else if (up == 1)   // count up (increment)
+           count <= count + 1; 
+        else if (up == 0)   // count down (decrement)
+           count <= count - 1;  
+    end 
+       
+    
+    //- handles the RCO, which is direction dependent
+    always @(count, up)
+    begin 
+       if ( up == 1 && &count == 1'b1)
+          rco = 1'b1;
+       else if (up == 0 && |count == 1'b0)
+          rco = 1'b1;
+       else 
+          rco = 1'b0; 
+    end
+    
+endmodule
+
+ module stand_dcdr_2t4_1cold(SEL, D_OUT); 
+    input  [1:0] SEL; 
+    output reg [3:0] D_OUT;  
+       
+   
+    //- standard decoder for display multiplex 
+    always @ (SEL)
+    begin
+       case (SEL)
+          0: D_OUT = 4'b1110;  
+          1: D_OUT = 4'b1101; 
+          2: D_OUT = 4'b1011;
+          3: D_OUT = 4'b0111;
+          default D_OUT = 0; 
+       endcase 
+    end 
+	
+endmodule
+
+ module mux_2t1_nb(SEL, D0, D1, D_OUT); 
+       input  SEL; 
+       input  [n-1:0] D0, D1; 
+       output reg [n-1:0] D_OUT;  
+       
+       parameter n = 8; 
+        
+       always @(SEL, D0, D1)
+       begin 
+          if      (SEL == 0)  D_OUT = D0;
+          else if (SEL == 1)  D_OUT = D1; 
+          else                D_OUT = 0; 
+       end
+                
+endmodule
+
+
+module FSM_Sequence_Detector(reset_n, x_in, btn, clk, moore); 
+      input reset_n,
+            btn, 
+            clk,
+            x_in;
+           
+    output reg moore;
+     
+    //- next state & present state variables
+    reg [3:0] NS, PS; 
+    //- bit-level state representations
+    parameter [3:0] st_ = 4'b0000, st_0 = 4'b0001, st_01 = 4'b0010, st_011 = 4'b0011,
+                    st_0111 = 4'b0100, st_01110 = 4'b0101, st_011101 = 4'b0110, 
+                    st_0110 = 4'b0111, st_01100 = 4'b1000, st_011001 = 4'b1001; 
+    
+
+    //- model the state registers
+    always @ (negedge reset_n, posedge clk)
+       if (reset_n == 1) 
+          PS <= st_; 
+       else
+          PS <= NS; 
+    
+    //- model the next-state and output decoders
+    always @ ( x_in, PS, btn)
+    begin
+       moore = 0; // assign all outputs
+       case(PS)
+        
+        st_:
+          begin
+             moore = 0;        
+             if (x_in == 1)
+                NS = st_;  
+             else
+                NS = st_0;  
+          end
+          
+        st_0:
+           begin
+             moore = 0;        
+             if (x_in == 1)  
+                 NS = st_01; 
+             else
+                 NS = st_0; 
+             end   
+             
+          st_01:
+             begin
+               moore = 0;        
+               if (x_in == 1)  
+                  NS = st_011; 
+               else
+                  NS = st_0; 
+             end   
+             
+         st_011:
+             begin
+                moore = 0;
+             if (btn == 1)
+               begin        
+               if (x_in == 1)  
+                  NS = st_0111; 
+               else
+                  NS = st_0; 
+               end
+             else 
+                begin
+                if (x_in == 1)
+                  NS = st_;
+                else
+                  NS = st_0110;
+                end               
+             end
+             
+         st_0111:
+              begin                                
+              moore = 0;        
+              if (x_in == 1)  
+                 NS = st_; 
+              else
+                 NS = st_01110; 
+              end    
+             
+          st_01110:
+              begin
+              moore = 0;
+              if (x_in == 1)
+                NS = st_011101;
+              else 
+                NS = st_0;
+              end
+              
+            st_011101:
+             begin
+             if (btn == 1)
+             moore = 1; 
+             else if (btn == 0)
+             moore = 0;
+               if (x_in == 1)
+                  NS = st_;
+               else 
+                  NS = st_0;
+            end  
+           st_0110: 
+               begin
+               moore = 0;
+               if (x_in == 1)
+                 NS = st_01;
+               else
+                 NS = st_01100;
+               end
+               
+            st_01100:
+                begin
+                moore = 0;
+                if (x_in == 1)
+                  NS = st_011001;
+                else
+                  NS = st_0;
+                end
+             
+             st_011001:
+                 begin
+                 if (btn == 1)
+                 moore = 0;
+                 else if (btn == 0)
+                 moore = 1; 
+                 if (x_in == 1)
+                    NS = st_;
+                 else 
+                    NS = st_0;
+                 end
+          default: NS = st_; 
+            
+          endcase
+      end
+                    
+endmodule
+
+module seq_detect_driver(
+    input [7:0] switches,
+    input btn,
+    input clk,
+    input reset,
+    output [7:0] segs,
+    output [3:0] an,
+    output reg [7:0] leds
+    );
+    
+    wire clk_slow; 
+    wire [2:0] mux_sel; 
+    wire switch_bit; 
+    wire clk_mux_disp; 
+    wire [1:0] multiplex_sel; 
+    
+    reg [7:0] cool_seg_data; 
+    reg [7:0] crud_seg_data; 
+    
+    wire fsm_Z; 
+        
+    // dummy FSM module
+    FSM_Sequence_Detector  my_fsm (
+        .clk (clk_slow),
+ //       .clk (clk),
+        .btn (btn),
+        .x_in (switch_bit),
+        .moore (fsm_Z)
+        );
+    
+    //- driver for LEDs
+        always @ (mux_sel)
+        begin
+           case (mux_sel)
+              1: leds  = 'h01;  // 
+              2: leds  = 'h02;  // 
+              3: leds  = 'h04;  // 
+              4: leds  = 'h08;  // 
+              5: leds  = 'h10;  // 
+              6: leds  = 'h20;  // 
+              7: leds  = 'h40;  // 
+              0: leds  = 'h80;  // 
+              default leds = 0; 
+           endcase 
+        end     
+    
+    //- clock divider ~2Hz
+    clk_divder_nbit #(.n(25)) MY_DIV (
+              .clockin (clk), 
+              .clockout (clk_slow) 
+              );     
+    
+    // MUX to decider FSM data input
+    mux_8t1_nb  #(.n(1)) my_8t1_mux  (
+                  .SEL   (mux_sel), 
+                  .D0    (switches[0]), 
+                  .D1    (switches[1]), 
+                  .D2    (switches[2]), 
+                  .D3    (switches[3]),
+                  .D4    (switches[4]),
+                  .D5    (switches[5]),
+                  .D6    (switches[6]),
+                  .D7    (switches[7]),
+                  .D_OUT (switch_bit) );  
+
+
+     // counter to drive switch input MUX sel
+     cntr_udclr_nb #(3) my_led_clk (
+        .clk   (clk_slow), 
+//        .clk   (clk), 
+        .clr   (reset), 
+        .up    (1), 
+        .ld    (0), 
+        .D     (0), 
+        .count (mux_sel), 
+        .rco   ()   );     
+    
+     // counter to drive switch input MUX sel
+     cntr_udclr_nb #(2) my_disp_multiplex_cntr (
+        .clk   (clk_mux_disp), 
+        .clr   (0), 
+        .up    (1), 
+        .ld    (0), 
+        .D     (0), 
+        .count (multiplex_sel), 
+        .rco   ()   ); 
+    
+
+    //- clock divider for muliplexed displayz
+    clk_divder_nbit #(.n(13)) mux_display_clk (
+              .clockin (clk), 
+              .clockout (clk_mux_disp) 
+              );     
+    
+    //- standard decoder to drive anodes
+    stand_dcdr_2t4_1cold  my_stand_dcdr  (
+                    .SEL    (multiplex_sel), 
+                    .D_OUT  (an)  );    
+    
+   
+    //- 7 seg decoder for good message 
+    always @ (multiplex_sel)
+    begin
+       case (multiplex_sel)
+          0: cool_seg_data  = 'h63; 
+          1: cool_seg_data  = 'hC5;  
+          2: cool_seg_data  = 'hC5;  
+          3: cool_seg_data  = 'hE3;
+          default cool_seg_data = 0; 
+       endcase 
+    end 
+
+    //- 7 seg decoder for bad message
+    always @ (multiplex_sel)
+    begin
+       case (multiplex_sel)
+          0: crud_seg_data  = 'h63; 
+          1: crud_seg_data  = 'hF5;  
+          2: crud_seg_data  = 'hC7;  
+          3: crud_seg_data  = 'h85;
+          default crud_seg_data = 0; 
+       endcase 
+    end 
+    
+   //- Selects either good/bad message based on FSM output 
+   mux_2t1_nb  #(.n(8)) my_2t1_mux  (
+           .SEL   (fsm_Z), 
+           .D0    (crud_seg_data), 
+           .D1    (cool_seg_data), 
+           .D_OUT (segs) );  
+         
+endmodule
