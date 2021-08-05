@@ -1,23 +1,20 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+//////////////////////////////////////////////////////////////////////
+// Company: Cal Poly
+// Engineer: Filippo Cheein, Jose Gomez
 // 
-// Create Date: 11/09/2018 12:23:52 PM
-// Design Name: 
-// Module Name: 3_Bit_Counter
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Create Date: 11/28/2018 11:39:46 AM
+// Design Name: 3-Bit up/down Counter
+// Project Name: 3-Bit up/down Counter
 // 
-// Dependencies: 
+// Description: This circuit will act as a counter, counting from 0-7 
+//              either backwards or forwards depending on one of the  
+//              switch inputs. The circuit also has the capability to 
+//              count up/down by even or odd numbers based on the Even 
+//              or ODD inputs to the circuit.
 // 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+
 
 module clk_divder_nbit(clockin, clockout); 
     input clockin; 
