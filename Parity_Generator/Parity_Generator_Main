@@ -1,0 +1,481 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Dynamik Ronco
+// Engineer: Filippo Cheein
+// 
+// Create Date: 12/03/2018 10:36:56 PM
+// Design Name: Parity Generator Circuit
+// Module Name: Parity_Generator_Main
+// Project Name: Parity Generator
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Description: Circuit takes inputs to a circuit from switches on the 
+// board and analyzes the numbers parity displaying EE or 
+// oo, for even parity or odd parity respectively. 
+// 
+//////////////////////////////////////////////////////////////////////////////////
+module clk_divder_nbit(clockin, clockout); 
+    input clockin; 
+    output wire clockout; 
+
+    parameter n = 13; 
+    reg [n:0] count; 
+
+    always@(posedge clockin) 
+    begin 
+        count <= count + 1; 
+    end 
+
+    assign clockout = count[n]; 
+endmodule 
+
+module cntr_up_clr_nb(clk, clr, up, ld, D, count, rco); 
+    input  clk, clr, up, ld; 
+    input  [n-1:0] D; 
+    output   reg [n-1:0] count; 
+    output   reg rco; 
+
+    //- default data-width 
+    parameter n = 8; 
+    
+    always @(posedge clr, posedge clk)
+    begin 
+        if (clr == 1)       // asynch reset
+           count <= 0;
+        else if (ld == 1)   // load new value
+           count <= D; 
+        else if (up == 1)   // count up (increment)
+           count <= count + 1;  
+    end 
+       
+    
+    //- handles the RCO, which is direction dependent
+    always @(count, up)
+    begin 
+       if ( up == 1 && &count == 1'b1)
+          rco = 1'b1;
+       else if (up == 0 && |count == 1'b0)
+          rco = 1'b1;
+       else 
+          rco = 1'b0; 
+    end
+    
+endmodule
+
+module usr_nb(data_in, dbit, sel, clk, clr, data_out); 
+    input  [n-1:0] data_in; 
+    input  dbit, clk, clr; 
+    input  [1:0] sel; 
+    output reg [n-1:0] data_out; 
+
+    parameter n = 8; 
+    
+    always @(posedge clr, posedge clk)
+    begin 
+        if (clr == 1)     // asynch reset
+           data_out <= 0;
+        else 
+           case (sel) 
+              0: data_out <= data_out;                // hold value
+              1: data_out <= data_in;                 // load
+              2: data_out <= {data_out[n-2:0],dbit};  // shift left
+              3: data_out <= {dbit,data_out[n-1:1]};  // shift right
+              default data_out <= 0; 
+           endcase 
+    end
+    
+    
+endmodule
+
+  module mux_4t1_nb(SEL, D0, D1, D2, D3, D_OUT); 
+       input  [1:0] SEL; 
+       input  [n-1:0] D0, D1, D2, D3; 
+       output reg [n-1:0] D_OUT;  
+       
+       parameter n = 8; 
+        
+       always @(SEL, D0, D1, D2, D3)
+       begin 
+          if      (SEL == 0)  D_OUT = D0;
+          else if (SEL == 1)  D_OUT = D1; 
+          else if (SEL == 2)  D_OUT = D2; 
+          else if (SEL == 3)  D_OUT = D3; 
+          else                D_OUT = 0; 
+       end
+                
+endmodule
+
+
+
+module cntr_up_clr_nb(clk, clr, up, ld, D, count, rco); 
+    input  clk, clr, up, ld; 
+    input  [n-1:0] D; 
+    output   reg [n-1:0] count; 
+    output   reg rco; 
+
+    //- default data-width 
+    parameter n = 8; 
+    
+    always @(posedge clr, posedge clk)
+    begin 
+        if (clr == 1)       // asynch reset
+           count <= 0;
+        else if (ld == 1)   // load new value
+           count <= D; 
+        else if (up == 1)   // count up (increment)
+           count <= count + 1;  
+    end 
+       
+    
+    //- handles the RCO, which is direction dependent
+    always @(count, up)
+    begin 
+       if ( up == 1 && &count == 1'b1)
+          rco = 1'b1;
+       else if (up == 0 && |count == 1'b0)
+          rco = 1'b1;
+       else 
+          rco = 1'b0; 
+    end
+    
+endmodule
+
+module clk_divder_nbit(clockin, clockout); 
+    input clockin; 
+    output wire clockout; 
+
+    parameter n = 13; 
+    reg [n:0] count; 
+
+    always@(posedge clockin) 
+    begin 
+        count <= count + 1; 
+    end 
+
+    assign clockout = count[n]; 
+endmodule 
+
+//7-Segment display module
+module our_sseg(clk, seg, Anodes, count_bits, parity);
+    input clk;
+    input [4:0] count_bits;
+    input parity;
+    
+    //inputs taken as two binary coded decimal numbers 
+     reg [3:0] BCD10s;
+     reg [3:0] BCD1s;
+    
+    wire fastclock;
+    wire slow_clk;
+    wire [1:0] count;
+    wire [3:0] value;
+    reg [3:0] parity_binary;
+    
+    output reg [7:0] seg;
+    output reg [3:0] Anodes;
+    
+    
+  
+     always @ (parity)
+       begin
+         case (parity)
+           
+           0 : parity_binary = 4'b1010;   
+           1 : parity_binary = 4'b1011;
+           
+         endcase
+       end
+  
+      
+           // first 2 right anodes for bits
+           always @ (count_bits)
+           begin 
+               case (count_bits)
+                  0 : begin
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0000;
+                      end
+                  1 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0001;
+                      end
+                      
+                  2 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0010;
+                      end
+                      
+                  3 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0011;
+                      end 
+                    
+                  4 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0100;
+                      end
+                      
+                  5 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0101;
+                      end 
+                      
+                  6 : begin 
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0110;
+                      end
+                      
+                  7 : begin
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b0111;
+                      end
+                      
+                  8 : begin
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b1000; 
+                      end
+                      
+                  9 : begin
+                         BCD10s = 4'b0000;
+                         BCD1s = 4'b1001;
+                      end
+                       
+                  10 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0000;
+                       end
+                       
+                  11 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0001;
+                       end 
+                       
+                  12 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0010;
+                       end
+                       
+                  13 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0011;
+                       end 
+                       
+                  14 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0100;
+                       end 
+                       
+                  15 : begin
+                          BCD10s = 4'b0001;
+                          BCD1s = 4'b0101;
+                       end 
+                       
+                  16 : begin
+                         BCD10s = 4'b0001;
+                         BCD1s  = 4'b0110;
+                       end
+                       
+               endcase
+           end 
+  
+  //clock divider for anode selection
+               clk_divder_nbit #(.n(13)) Fast(
+                   .clockin (clk),
+                   .clockout (fastclock)
+                   );
+       
+             clk_divder_nbit #(.n(16)) MY_DIV (
+                       .clockin (clk), 
+                       .clockout (slow_clk)   ); 
+                       
+            cntr_up_clr_nb #(.n(2)) MY_CNTR_insseg (
+                                 .clk   (fastclock), 
+                                 .clr   (), 
+                                 .up    (1), 
+                                 .ld    (0), 
+                                 .D     (00), 
+                                 .count (count), 
+                                 .rco   ()   );
+                        
+                          mux_4t1_nb  #(.n(4)) my_4t1_mux_out  (
+                                 .SEL   (count), 
+                                 .D0    (BCD10s),
+                                 .D1    (BCD1s),
+                                 .D2    (parity_binary), 
+                                 .D3    (parity_binary),
+                                 .D_OUT (value) );  
+                                                   
+                                                   
+                          // rapid flickering of anodes
+                          always @ (count)
+                          begin 
+                              case (count)
+                                 0 : Anodes = 4'b0111;
+                                 1 : Anodes = 4'b1011;
+                                 2 : Anodes = 4'b1101;
+                                 3 : Anodes = 4'b1110;
+                              endcase
+                          end
+                          
+                          //Seven segment display data
+                          always @ (value)
+                          begin
+                              case (value)
+                                 0 : seg = 8'b00000011;
+                                 
+                                 1 : seg = 8'b10011111;
+                                 
+                                 2 : seg = 8'b00100101;
+                                 
+                                 3 : seg = 8'b00001101;
+                                 
+                                 4 : seg = 8'b10011001;
+                                 
+                                 5 : seg = 8'b01001001;
+                                 
+                                 6 : seg = 8'b01000001;
+                                 
+                                 7 : seg = 8'b00011111;
+                                 
+                                 8 : seg = 8'b00000001;
+                                 
+                                 9 : seg = 8'b00001001;
+                                 
+                                 10 : seg = 8'b01100001;
+                                 
+                                 11 : seg = 8'b11000101;
+                                 
+                              endcase
+                          end
+    
+endmodule
+
+module Parity_Generator_Main(BTN, clk, switches, sseg, DISP_EN);
+
+    input BTN;
+    input clk;
+    input [15:0] switches;
+    
+    wire slow_clk;
+    wire [1:0] SEL;
+    wire [4:0] count_end;
+    wire [4:0] count_output;
+    wire [15:0] data_out;
+    wire RCO;
+    wire CLR;
+
+    output [7:0] sseg;
+    output [3:0] DISP_EN;
+    
+    
+      usr_nb #(.n(16)) MY_USR (
+          .data_in (switches[15:0]), 
+          .dbit (0), 
+          .sel (SEL), 
+          .clk (slow_clk), 
+          .clr (0), 
+          .data_out (data_out)  );  
+          
+          
+      cntr_up_clr_nb #(.n(5)) MY_CNTR_output (
+          .clk   (slow_clk), 
+          .clr   (CLR), 
+          .up    (data_out[0]), 
+          .ld    (0), 
+          .D     (), 
+          .count (count_output), 
+          .rco   ()   ); 
+       
+      cntr_up_clr_nb #(.n(5)) MY_CNTR_end (
+          .clk   (slow_clk), 
+          .clr   (0), 
+          .up    (1), 
+          .ld    (0), 
+          .D     (), 
+          .count (count_end), 
+          .rco   (RCO)   );
+
+      clk_divder_nbit #(.n(16)) MY_DIV (
+          .clockin (clk), 
+          .clockout (slow_clk)   );
+
+       our_sseg(
+            .clk (clk), 
+            .count_bits (count_output), 
+            .parity (count_output[0]), 
+            .seg (sseg), 
+            .Anodes(DISP_EN)    );
+
+     fsm_template(
+            .reset (0), 
+            .btn (BTN), 
+            .clr (CLR),
+            .clk (slow_clk), 
+            .rco (RCO),        
+            .sel (SEL)   ); 
+
+
+endmodule
+
+module fsm_template(reset, btn, clk, rco, sel, clr); 
+    input  reset, btn, rco, clk;
+    output reg clr; 
+    output reg [1:0] sel;
+     
+    //- next state & present state variables
+    reg [1:0] NS, PS; 
+    //- bit-level state representations
+    parameter [1:0] st_wait = 2'b00, st_load = 2'b01, st_shift = 2'b10;// st_btn = 2'b11; 
+    
+
+    //- model the state registers
+    always @ (negedge reset, posedge clk)
+       if (reset == 1) 
+          PS <= st_wait; 
+       else
+          PS <= NS; 
+    
+    
+    //- model the next-state and output decoders
+    always @ (btn, PS, rco)
+    begin
+        sel = 0;
+      // clr = 0; // assign all outputs
+       case(PS)
+       
+          st_wait:
+          begin
+
+             if (btn == 1)  
+             begin
+                clr = 1;
+                NS = st_load; 
+             end
+             else
+                NS = st_wait; 
+          end
+          
+          st_load:
+             begin
+                clr = 0;
+                sel = 2'b01;
+                NS = st_shift;
+             end   
+             
+          st_shift:
+             begin
+                sel = 2'b11;
+                 if (rco == 1)
+                    NS = st_wait;
+                 else
+                    NS = st_shift; 
+             end
+ 
+          default: NS = st_wait; 
+            
+          endcase
+      end              
+endmodule
+
