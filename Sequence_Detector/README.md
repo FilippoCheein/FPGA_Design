@@ -7,5 +7,6 @@ Black Box Diagram:
 ![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sequence_Detector/Sequence_Detector%20-%20Design_Diagram.jpg?raw=true)
 
 FSM State Diagram:
+
 ![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sequence_Detector/Sequence_Detector%20-%20FSM_State_Diagram.jpg?raw=true)
 
