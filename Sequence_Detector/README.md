@@ -1,11 +1,11 @@
-In this code, we have designed a circuit that would count the number of switches on and decide the parity of the binary input.
+In this experiment, we design an FSM sequence detector that will detect a sequence based on the button pressed information and a preset input sequence using switches.
 
-The circuit has two outputs. One output is the number of bits set in a 16-bit word (a stone-age binary to decimal conversion), and the other is an output indicates the parity of the 16-bit word.
-The 16 switches on the development board are used as the input word. Two 7-segment display devices are used to display the result of the stone-age binary to decimal conversion.
-The other two unused 7-segment displays are used to indicate parity with an “EE” for even parity and “oo” for odd parity.
-When the user presses a button, the circuit calculates the parity and displays the results accordingly.
-It then waits for another button press.
+circuit uses first 8 switches to input random 1’s and 0’s to a string of numbers. This string is fed into a sequence detector and analyzed to check if one of two pre-set sequences can be found in the string. “Cool” message is shown if sequence is found, and “Crud” if one isn’t found.
 
-Design Diagram: 
+Black Box Diagram: 
 
-![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sequence_Detector/Sequence_Detector_Design_Diagram_.jpg?raw=true)
+![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sequence_Detector/Sequence_Detector%20-%20Design_Diagram.jpg?raw=true)
+
+FSM State Diagram:
+![alt text](https://github.com/FilippoCheein/FPGA_Design/blob/main/Sequence_Detector/Sequence_Detector%20-%20FSM_State_Diagram.jpg?raw=true)
+
